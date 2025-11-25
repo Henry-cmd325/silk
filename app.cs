@@ -8,15 +8,13 @@
 using System;
 using System.Numerics;
 using System.Text;
-using Silk.NET.Windowing;
-using Silk.NET.Maths;
 using Veldrid;
 using Veldrid.Sdl2;
 using Veldrid.StartupUtilities;
 using Veldrid.SPIRV;
 
 // --- 1. Declaración de variables (sin private static) ---
-IWindow _window = null!;
+Sdl2Window _window = null!;
 GraphicsDevice _gd = null!;
 CommandList _cl = null!;
 DeviceBuffer _vertexBuffer = null!;
@@ -45,34 +43,38 @@ const string FragmentCode = @"
     }";
 
 // --- 3. Lógica Principal ---
-WindowOptions options = WindowOptions.Default;
-options.Size = new Vector2D<int>(800, 600);
-options.Title = "Hola Veldrid - Primer Triángulo";
-
-_window = Window.Create(options);
-_window.Load += OnLoad;
-_window.Render += OnRender;
-_window.Run();
-
-SwapchainSource GetSwapchainSource(IWindow window)
+WindowCreateInfo windowCI = new WindowCreateInfo()
 {
-    // Si estamos en Windows
-    if (window.Native.Win32.HasValue)
-    {
-        var handle = window.Native.Win32.Value.Hwnd;
-        var hinstance = window.Native.Win32.Value.Hinstance;
-        return SwapchainSource.CreateWin32(handle, hinstance);
-    }
-    // Si estuviéramos en Linux (X11) o Mac, aquí irían los 'else if'
-    // Para este ejemplo asumiremos Windows o tiramos error
-    throw new PlatformNotSupportedException("Por ahora este ejemplo solo soporta Windows.");
+    X = 100,
+    Y = 100,
+    WindowWidth = 800,
+    WindowHeight = 600,
+    WindowTitle = "Hola Veldrid - Primer Triángulo"
+};
+
+_window = VeldridStartup.CreateWindow(ref windowCI);
+
+// Crear dispositivo gráfico (Windows -> Direct3D11)
+var gdOptions = new GraphicsDeviceOptions(false, null, true)
+{
+    PreferStandardClipSpaceYDirection = true,
+    PreferDepthRangeZeroToOne = true
+};
+_gd = VeldridStartup.CreateGraphicsDevice(_window, gdOptions);
+
+// Inicializar recursos
+OnLoad();
+
+// Bucle principal sencillo
+while (_window.Exists)
+{
+    _window.PumpEvents();
+    OnRender(0);
 }
 
 // --- 4. Funciones Locales (pueden acceder a las variables de arriba) ---
 void OnLoad()
 {
-    // 1. Crear dispositivo gráfico
-    _gd = GetSwapchainSource(_window).CreateGraphicsDevice();
     var factory = _gd.ResourceFactory;
 
     // 2. Crear datos de vértices (Un triángulo)
